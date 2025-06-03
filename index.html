@@ -1,87 +1,98 @@
-<!doctype html>
-<html lang="en" style="width:100%;height:100%;">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="description" content="Student Habits vs. Academic Performance Dashboard">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Student Habits vs. Academic Performance</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Student Habits Visualization</title>
   <style>
-    body { font-family: sans-serif; margin: 10px; }
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 10px;
-      grid-auto-rows: auto;
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background-color: #f8f9fa;
     }
-    #hist-chart, #pie-chart { grid-row: 1; }
-
-    /* Make the dendrogram scrollable horizontally */
-    #dendro-chart {
-      grid-column: 1 / -1;
-      grid-row: 2;
-      overflow-x: auto;
+    section {
+      padding: 60px 20px;
+      min-height: 100vh;
+      border-bottom: 1px solid #ddd;
     }
-
-    .chart {
-      background: #fafafa;
-      padding: 5px;
-      border: 1px solid #ddd;
-      border-radius: 2px;
+    h2 {
+      text-align: center;
+      margin-bottom: 30px;
     }
-    .chart h2 { margin: 0.2em 0; font-size: 1.2em; }
-    .chart p  { margin: 0 0 0.6em; color: #555; }
-
-    .chart svg {
-      width: 100%;
+    svg {
       display: block;
+      margin: 0 auto;
     }
-    #hist-chart svg, #pie-chart svg {
-      height: 400px;
-    }
-
-    /* Give dendro SVG a min-width so you can scroll to see the full tree */
-    #dendro-chart svg {
-      height: auto;
-      min-width: 800px;
-    }
-
     .tooltip {
       position: absolute;
-      pointer-events: none;
-      background: rgba(0,0,0,0.7);
-      color: #fff;
-      padding: 6px 8px;
-      border-radius: 4px;
+      text-align: center;
+      padding: 8px;
       font-size: 12px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      pointer-events: none;
+      opacity: 0;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+    .hidden {
       display: none;
     }
   </style>
 </head>
 <body>
 
-  <div class="grid">
-    <div class="chart" id="hist-chart">
-      <h2>Study Hours Distribution</h2>
-      <p>Brush to filter students by daily study-hour ranges.</p>
-      <svg></svg>
-    </div>
+  <section id="intro-slide">
+    <h2>Understanding What Impacts Student Exam Scores</h2>
+    <p style="text-align:center; max-width: 600px; margin: auto;">
+      This interactive exploration reveals which daily habits influence student performance the most. Scroll to explore the data and insights.
+    </p>
+  </section>
 
-    <div class="chart" id="pie-chart">
-      <h2>Job Status Breakdown</h2>
-      <p>Click a slice to select that group.</p>
-      <svg></svg>
-    </div>
+  <section id="study-slide">
+    <h2>Study Hours per Day</h2>
+    <svg id="study"></svg>
+  </section>
 
-    <div class="chart" id="dendro-chart">
-      <h2>Job Status → Exam-Score Bins</h2>
-      <p>High (≥85), Mid (70–84), Low (&lt;70); filtered by brush &amp; click.</p>
-      <svg></svg>
-    </div>
-  </div>
+  <section id="sleep-slide">
+    <h2>Sleep Duration vs Exam Score</h2>
+    <svg id="sleep"></svg>
+  </section>
 
-  <div class="tooltip" id="tooltip"></div>
-  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <section id="social-slide">
+    <h2>Social Media Usage vs Exam Score</h2>
+    <svg id="social"></svg>
+  </section>
+
+  <section id="parallel-slide">
+    <h2>Student Habits Compared Across All Factors</h2>
+    <svg id="parallelchart"></svg>
+  </section>
+
+  <section id="violin-slide">
+    <h2>Exam Score Distribution by Extracurricular Participation</h2>
+    <svg id="violinplot"></svg>
+  </section>
+
+  <section id="bubble-slide">
+    <h2>Study vs Sleep with Exam Score as Bubble Size</h2>
+    <svg id="bubblechart"></svg>
+  </section>
+
+  <section id="attendance-slide">
+    <h2>Attendance vs Exam Score</h2>
+    <svg id="attendancechart"></svg>
+  </section>
+
+  <section id="diet-slide">
+    <h2>Diet Quality Distribution</h2>
+    <svg id="dietchart"></svg>
+  </section>
+
+  <div id="tooltip" class="tooltip"></div>
+
+  <!-- Data + JS -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="main.js"></script>
 </body>
 </html>
