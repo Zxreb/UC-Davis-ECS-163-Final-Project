@@ -3,54 +3,421 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Student Habits Visualization</title>
+  <title>Student Performance Analytics</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --primary: #3b82f6;
+      --secondary: #1e40af;
+      --accent: #0ea5e9;
+      --text-primary: #1f2937;
+      --text-secondary: #6b7280;
+      --background: #ffffff;
+      --surface: #f8fafc;
+      --border: #e5e7eb;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
       margin: 0;
-      background-color: #f8f9fa;
+      background: #000000;
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
     }
+
+    /* Modern animated background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        radial-gradient(circle at 20% 80%, #3b82f6 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, #1e40af 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, #0ea5e9 0%, transparent 50%),
+        linear-gradient(135deg, #000000 0%, #0a0a0a 50%, #1a1a1a 100%);
+      animation: backgroundMove 20s ease-in-out infinite;
+      z-index: -2;
+    }
+
+    @keyframes backgroundMove {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.8; }
+    }
+
+    /* Floating geometric shapes */
+    .bg-shapes {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .shape {
+      position: absolute;
+      opacity: 0.1;
+      animation: float 15s infinite linear;
+    }
+
+    .shape:nth-child(1) {
+      top: 20%;
+      left: 10%;
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(45deg, #3b82f6, #1e40af);
+      border-radius: 50%;
+      animation-delay: 0s;
+    }
+
+    .shape:nth-child(2) {
+      top: 60%;
+      right: 15%;
+      width: 120px;
+      height: 120px;
+      background: linear-gradient(45deg, #0ea5e9, #1e40af);
+      clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+      animation-delay: -5s;
+    }
+
+    .shape:nth-child(3) {
+      top: 40%;
+      left: 70%;
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(45deg, #1e40af, #3b82f6);
+      transform: rotate(45deg);
+      animation-delay: -10s;
+    }
+
+    @keyframes float {
+      0% { transform: translateY(0px) rotate(0deg); }
+      33% { transform: translateY(-30px) rotate(120deg); }
+      66% { transform: translateY(20px) rotate(240deg); }
+      100% { transform: translateY(0px) rotate(360deg); }
+    }
+
     section {
-      padding: 60px 20px;
+      padding: 40px 20px;
       min-height: 100vh;
-      border-bottom: 1px solid #ddd;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: rgba(255,255,255,0.02);
+      backdrop-filter: blur(20px);
+      position: relative;
     }
-    h2 {
+
+    section:nth-child(even) {
+      background: rgba(255,255,255,0.05);
+    }
+
+    section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, rgba(30, 64, 175, 0.1) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    section > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Hero Section Styles */
+    #intro-slide {
+      background: linear-gradient(135deg, 
+        rgba(59, 130, 246, 0.1) 0%, 
+        rgba(30, 64, 175, 0.1) 50%, 
+        rgba(14, 165, 233, 0.1) 100%);
       text-align: center;
-      margin-bottom: 30px;
+      padding: 80px 20px;
     }
+
+    .hero-content {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 50px;
+      padding: 8px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.9);
+      margin-bottom: 30px;
+      backdrop-filter: blur(10px);
+    }
+
+    .hero-title {
+      font-size: clamp(3rem, 8vw, 6rem);
+      font-weight: 800;
+      background: linear-gradient(135deg, #ffffff 0%, #bfdbfe 50%, #93c5fd 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 30px;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-subtitle {
+      font-size: clamp(1.2rem, 3vw, 1.5rem);
+      color: rgba(255,255,255,0.8);
+      margin-bottom: 40px;
+      font-weight: 400;
+      line-height: 1.4;
+    }
+
+    .hero-stats {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin-bottom: 50px;
+      flex-wrap: wrap;
+    }
+
+    .stat-item {
+      text-align: center;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 20px;
+      backdrop-filter: blur(10px);
+      min-width: 120px;
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #ffffff;
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 0.875rem;
+      color: rgba(255,255,255,0.7);
+      margin-top: 4px;
+    }
+
+    .scroll-indicator {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.6);
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .scroll-arrow {
+      width: 24px;
+      height: 24px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: bounce 2s infinite;
+    }
+
+    .scroll-arrow::after {
+      content: '↓';
+      font-size: 12px;
+    }
+
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-10px); }
+      60% { transform: translateY(-5px); }
+    }
+
+    /* Regular section headers */
+    h2 {
+      font-size: clamp(1.8rem, 4vw, 2.5rem);
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #ffffff 0%, #bfdbfe 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      position: relative;
+    }
+
+    h2::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 3px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 2px;
+    }
+
+    p {
+      text-align: center;
+      max-width: 700px;
+      margin: 0 auto 30px;
+      font-size: 1.1rem;
+      color: rgba(255,255,255,0.8);
+      font-weight: 400;
+    }
+
     svg {
       display: block;
       margin: 0 auto;
+      background: rgba(255,255,255,0.95);
+      border-radius: 12px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.2);
     }
+
     .tooltip {
       position: absolute;
-      text-align: center;
-      padding: 8px;
-      font-size: 12px;
-      background: white;
-      border: 1px solid #ccc;
-      border-radius: 4px;
+      text-align: left;
+      padding: 12px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      border-radius: 8px;
       pointer-events: none;
       opacity: 0;
-      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      color: var(--text-primary);
+      max-width: 250px;
+      z-index: 1000;
+      transition: opacity 0.2s ease;
     }
-    .hidden {
-      display: none;
+
+    .tooltip strong {
+      color: var(--primary);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .bin-selector {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .bin-selector label {
+      font-weight: 500;
+      color: rgba(255,255,255,0.8);
+      margin-right: 8px;
+    }
+
+    .bin-selector select {
+      padding: 8px 16px;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.1);
+      color: white;
+      font-family: inherit;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    .bin-selector select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
+    }
+
+    .bin-selector select option {
+      background: #1f2937;
+      color: white;
+    }
+
+    /* Smooth scrolling */
+    html {
+      scroll-behavior: smooth;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      section {
+        padding: 30px 15px;
+      }
+      
+      .hero-stats {
+        gap: 20px;
+      }
+      
+      .stat-item {
+        min-width: 100px;
+        padding: 15px;
+      }
+      
+      h2 {
+        font-size: 1.8rem;
+      }
+      
+      p {
+        font-size: 1rem;
+      }
     }
   </style>
 </head>
 <body>
+  <div class="bg-shapes">
+    <div class="shape"></div>
+    <div class="shape"></div>
+    <div class="shape"></div>
+  </div>
 
   <section id="intro-slide">
-    <h2>Understanding What Impacts Student Exam Scores</h2>
-    <p style="text-align:center; max-width: 600px; margin: auto;">
-      This interactive exploration reveals which daily habits influence student performance the most. Scroll to explore the data and insights.
-    </p>
+    <div class="hero-content">
+      
+      
+      <h1 class="hero-title">What Really Drives Student Success?</h1>
+      
+      <p class="hero-subtitle">
+        Explore comprehensive analytics revealing the hidden patterns between daily habits, 
+        lifestyle choices, and academic performance across 1,000+ students.
+      </p>
+    </div>
+    
+    <div class="scroll-indicator">
+      <span>Scroll to explore</span>
+      <div class="scroll-arrow"></div>
+    </div>
   </section>
 
   <section id="study-slide">
-    <h2>Study Hours per Day</h2>
+    <h2>Study Hours Distribution</h2>
     <svg id="study"></svg>
   </section>
 
@@ -65,17 +432,17 @@
   </section>
 
   <section id="parallel-slide">
-    <h2>Student Habits Compared Across All Factors</h2>
+    <h2>Student Habits Across All Factors</h2>
     <svg id="parallelchart"></svg>
   </section>
 
   <section id="violin-slide">
-    <h2>Exam Score Distribution by Extracurricular Participation</h2>
+    <h2>Exam Scores by Extracurricular Participation</h2>
     <svg id="violinplot"></svg>
   </section>
 
   <section id="bubble-slide">
-    <h2>Study vs Sleep with Exam Score as Bubble Size</h2>
+    <h2>Study vs Sleep with Performance</h2>
     <svg id="bubblechart"></svg>
   </section>
 
@@ -85,20 +452,19 @@
   </section>
 
   <section id="diet-slide">
-    <h2>Diet Quality Distribution</h2>
+    <h2>Diet Quality Impact</h2>
     <svg id="dietchart"></svg>
   </section>
 
   <section id="radial-slide">
-    <h2>Individual Student Profile vs Class Averages</h2>
+    <h2>Student Profile Comparison</h2>
     <svg id="radialchart"></svg>
   </section>
 
   <section id="time-slide">
-    <h2>Daily Time Allocation by Performance Group</h2>
+    <h2>Daily Time Allocation Patterns</h2>
     <svg id="timeallocationchart"></svg>
   </section>
-
 
   <div id="tooltip" class="tooltip"></div>
 

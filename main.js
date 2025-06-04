@@ -1,12 +1,39 @@
 // main.js
 
-// D3 Visual Setup
-const tooltip = d3.select("body").append("div")
-  .attr("class", "tooltip")
-  .style("opacity", 0);
+// Modern color palette
+const colors = {
+  primary: '#6366f1',
+  secondary: '#8b5cf6',
+  accent: '#06b6d4',
+  success: '#10b981',
+  warning: '#f59e0b',
+  danger: '#ef4444'
+};
 
-  // Prevent Rerendering
+// D3 Visual Setup
+const tooltip = d3.select("#tooltip");
+
+// Prevent Rerendering
 let triggered = new Set();
+
+// Optimized chart dimensions
+const chartDimensions = {
+  width: 700,
+  height: 400,
+  margin: { top: 30, right: 40, bottom: 60, left: 60 }
+};
+
+// Enhanced tooltip function
+function showTooltip(event, content) {
+  tooltip.transition().duration(200).style("opacity", 1);
+  tooltip.html(content)
+    .style("left", `${event.pageX + 10}px`)
+    .style("top", `${event.pageY - 10}px`);
+}
+
+function hideTooltip() {
+  tooltip.transition().duration(200).style("opacity", 0);
+}
 
 // Load CSV and clean
 d3.csv("student_habits_performance.csv", d => ({
@@ -62,7 +89,6 @@ function setupScrollObserver(data) {
             case "diet-slide": renderDiet(data); break;
             case "radial-slide": renderRadialProfiles(data); break;
             case "time-slide": renderTimeAllocation(data); break;
-
           }
         }
       });
@@ -76,10 +102,7 @@ function setupScrollObserver(data) {
 // VISUAL 1: Study Hours Histogram
 function renderStudy(data) {
   const svg = d3.select("#study");
-
-  const margin = { top: 40, right: 30, bottom: 50, left: 50 };
-  const width = 800 - margin.left - margin.right;
-  const height = 500 - margin.top - margin.bottom;
+  const { width, height, margin } = chartDimensions;
 
   svg.attr("width", width + margin.left + margin.right)
      .attr("height", height + margin.top + margin.bottom);
@@ -94,11 +117,21 @@ function renderStudy(data) {
 
   const bins = d3.bin()
     .domain(x.domain())
-    .thresholds(10)(data.map(d => d.study));
+    .thresholds(12)(data.map(d => d.study));
 
   const y = d3.scaleLinear()
     .domain([0, d3.max(bins, d => d.length)]).nice()
     .range([height, 0]);
+
+  // Create gradient
+  const gradient = g.append("defs").append("linearGradient")
+    .attr("id", "studyGradient")
+    .attr("gradientUnits", "userSpaceOnUse")
+    .attr("x1", 0).attr("y1", height)
+    .attr("x2", 0).attr("y2", 0);
+  
+  gradient.append("stop").attr("offset", "0%").attr("stop-color", colors.primary);
+  gradient.append("stop").attr("offset", "100%").attr("stop-color", colors.secondary);
 
   // Bars
   g.selectAll("rect")
@@ -108,34 +141,36 @@ function renderStudy(data) {
     .attr("width", d => Math.max(0, x(d.x1) - x(d.x0) - 2))
     .attr("y", height)
     .attr("height", 0)
-    .attr("fill", "#69b3a2")
+    .attr("fill", "url(#studyGradient)")
+    .attr("rx", 4)
     .on("mouseover", (e, d) => {
-      d3.select("#tooltip")
-        .style("opacity", 1)
-        .html(`Study Range: ${d.x0.toFixed(1)}–${d.x1.toFixed(1)}<br/>Count: ${d.length}`)
-        .style("left", `${e.pageX + 5}px`)
-        .style("top", `${e.pageY - 28}px`);
+      showTooltip(e, `<strong>Study Hours</strong><br/>Range: ${d.x0.toFixed(1)}–${d.x1.toFixed(1)} hrs<br/>Students: ${d.length}`);
     })
-    .on("mouseout", () => {
-      d3.select("#tooltip").style("opacity", 0);
-    })
-    .transition().duration(800)
+    .on("mouseout", hideTooltip)
+    .transition().duration(1000).delay((d, i) => i * 80)
     .attr("y", d => y(d.length))
     .attr("height", d => height - y(d.length));
 
-  // Axis
+  // Axes with grid
   g.append("g")
     .attr("transform", `translate(0,${height})`)
-    .call(d3.axisBottom(x));
+    .call(d3.axisBottom(x).tickSize(-height).tickFormat(d3.format(".1f")))
+    .call(g => g.select(".domain").remove())
+    .call(g => g.selectAll(".tick line").attr("stroke-opacity", 0.1));
 
   g.append("g")
-    .call(d3.axisLeft(y));
+    .call(d3.axisLeft(y).tickSize(-width).ticks(6))
+    .call(g => g.select(".domain").remove())
+    .call(g => g.selectAll(".tick line").attr("stroke-opacity", 0.1));
 
   // Axis Labels
   g.append("text")
     .attr("x", width / 2)
-    .attr("y", height + 40)
+    .attr("y", height + 45)
     .attr("text-anchor", "middle")
+    .style("font-size", "14px")
+    .style("fill", "#6b7280")
+    .style("font-weight", "500")
     .text("Study Hours Per Day");
 
   g.append("text")
@@ -143,16 +178,16 @@ function renderStudy(data) {
     .attr("x", -height / 2)
     .attr("y", -40)
     .attr("text-anchor", "middle")
+    .style("font-size", "14px")
+    .style("fill", "#6b7280")
+    .style("font-weight", "500")
     .text("Number of Students");
 }
 
 // VISUAL 2: Sleep vs Exam Score
 function renderSleep(data) {
   const svg = d3.select("#sleep");
-
-  const margin = { top: 40, right: 30, bottom: 50, left: 60 };
-  const width = 800 - margin.left - margin.right;
-  const height = 500 - margin.top - margin.bottom;
+  const { width, height, margin } = chartDimensions;
 
   svg.attr("width", width + margin.left + margin.right)
      .attr("height", height + margin.top + margin.bottom);
@@ -169,26 +204,21 @@ function renderSleep(data) {
     .domain([0, 100])
     .range([height, 0]);
 
-  // Axis
+  const colorScale = d3.scaleSequential()
+    .domain([0, 100])
+    .interpolator(d3.interpolateViridis);
+
+  // Axes
   g.append("g")
     .attr("transform", `translate(0,${height})`)
-    .call(d3.axisBottom(x));
+    .call(d3.axisBottom(x).tickSize(-height))
+    .call(g => g.select(".domain").remove())
+    .call(g => g.selectAll(".tick line").attr("stroke-opacity", 0.1));
+  
   g.append("g")
-    .call(d3.axisLeft(y));
-
-  // Axis Labels
-  g.append("text")
-    .attr("x", width / 2)
-    .attr("y", height + 40)
-    .attr("text-anchor", "middle")
-    .text("Sleep Hours per Day");
-
-  g.append("text")
-    .attr("transform", "rotate(-90)")
-    .attr("x", -height / 2)
-    .attr("y", -50)
-    .attr("text-anchor", "middle")
-    .text("Exam Score");
+    .call(d3.axisLeft(y).tickSize(-width))
+    .call(g => g.select(".domain").remove())
+    .call(g => g.selectAll(".tick line").attr("stroke-opacity", 0.1));
 
   // Circles
   g.selectAll("circle")
@@ -198,29 +228,42 @@ function renderSleep(data) {
     .attr("cx", d => x(d.sleep))
     .attr("cy", d => y(d.exam))
     .attr("r", 0)
-    .attr("fill", "steelblue")
-    .attr("opacity", 0.7)
+    .attr("fill", d => colorScale(d.exam))
+    .attr("opacity", 0.8)
+    .attr("stroke", "white")
+    .attr("stroke-width", 1.5)
     .on("mouseover", (e, d) => {
-      d3.select("#tooltip")
-        .style("opacity", 1)
-        .html(`Sleep: ${d.sleep} hrs<br/>Score: ${d.exam}`)
-        .style("left", (e.pageX + 5) + "px")
-        .style("top", (e.pageY - 28) + "px");
+      showTooltip(e, `<strong>Student Data</strong><br/>Sleep: ${d.sleep} hrs<br/>Exam Score: ${d.exam.toFixed(1)}`);
     })
-    .on("mouseout", () => {
-      d3.select("#tooltip").style("opacity", 0);
-    })
-    .transition().duration(600)
+    .on("mouseout", hideTooltip)
+    .transition().duration(800).delay((d, i) => i * 3)
     .attr("r", 5);
+
+  // Axis Labels
+  g.append("text")
+    .attr("x", width / 2)
+    .attr("y", height + 45)
+    .attr("text-anchor", "middle")
+    .style("font-size", "14px")
+    .style("fill", "#6b7280")
+    .style("font-weight", "500")
+    .text("Sleep Hours per Day");
+
+  g.append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("x", -height / 2)
+    .attr("y", -40)
+    .attr("text-anchor", "middle")
+    .style("font-size", "14px")
+    .style("fill", "#6b7280")
+    .style("font-weight", "500")
+    .text("Exam Score");
 }
 
 // VISUAL 3: Social Media vs Exam
 function renderSocial(data) {
   const svg = d3.select("#social");
-
-  const margin = { top: 40, right: 30, bottom: 50, left: 60 };
-  const width = 800 - margin.left - margin.right;
-  const height = 500 - margin.top - margin.bottom;
+  const { width, height, margin } = chartDimensions;
 
   svg.attr("width", width + margin.left + margin.right)
      .attr("height", height + margin.top + margin.bottom);
@@ -237,27 +280,21 @@ function renderSocial(data) {
     .domain([0, 100])
     .range([height, 0]);
 
+  const colorScale = d3.scaleSequential()
+    .domain([100, 0])
+    .interpolator(d3.interpolateRdYlBu);
+
   // Axes
   g.append("g")
     .attr("transform", `translate(0,${height})`)
-    .call(d3.axisBottom(x));
+    .call(d3.axisBottom(x).tickSize(-height))
+    .call(g => g.select(".domain").remove())
+    .call(g => g.selectAll(".tick line").attr("stroke-opacity", 0.1));
 
   g.append("g")
-    .call(d3.axisLeft(y));
-
-  // Axis Labels
-  g.append("text")
-    .attr("x", width / 2)
-    .attr("y", height + 40)
-    .attr("text-anchor", "middle")
-    .text("Social Media Hours per Day");
-
-  g.append("text")
-    .attr("transform", "rotate(-90)")
-    .attr("x", -height / 2)
-    .attr("y", -50)
-    .attr("text-anchor", "middle")
-    .text("Exam Score");
+    .call(d3.axisLeft(y).tickSize(-width))
+    .call(g => g.select(".domain").remove())
+    .call(g => g.selectAll(".tick line").attr("stroke-opacity", 0.1));
 
   // Circles
   g.selectAll("circle")
@@ -267,28 +304,42 @@ function renderSocial(data) {
     .attr("cx", d => x(d.social))
     .attr("cy", d => y(d.exam))
     .attr("r", 0)
-    .attr("fill", "tomato")
-    .attr("opacity", 0.7)
+    .attr("fill", d => colorScale(d.exam))
+    .attr("opacity", 0.8)
+    .attr("stroke", "white")
+    .attr("stroke-width", 1.5)
     .on("mouseover", (e, d) => {
-      d3.select("#tooltip")
-        .style("opacity", 1)
-        .html(`Social Media: ${d.social} hrs<br/>Score: ${d.exam}`)
-        .style("left", (e.pageX + 5) + "px")
-        .style("top", (e.pageY - 28) + "px");
+      showTooltip(e, `<strong>Student Data</strong><br/>Social Media: ${d.social} hrs<br/>Exam Score: ${d.exam.toFixed(1)}`);
     })
-    .on("mouseout", () => {
-      d3.select("#tooltip").style("opacity", 0);
-    })
-    .transition().duration(600)
+    .on("mouseout", hideTooltip)
+    .transition().duration(800).delay((d, i) => i * 3)
     .attr("r", 5);
+
+  // Axis Labels
+  g.append("text")
+    .attr("x", width / 2)
+    .attr("y", height + 45)
+    .attr("text-anchor", "middle")
+    .style("font-size", "14px")
+    .style("fill", "#6b7280")
+    .style("font-weight", "500")
+    .text("Social Media Hours per Day");
+
+  g.append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("x", -height / 2)
+    .attr("y", -40)
+    .attr("text-anchor", "middle")
+    .style("font-size", "14px")
+    .style("fill", "#6b7280")
+    .style("font-weight", "500")
+    .text("Exam Score");
 }
 
 // VISUAL 4: Parallel Coordinates Plot
 function renderParallel(data) {
   const svg = d3.select("#parallelchart");
-  const margin = { top: 50, right: 50, bottom: 10, left: 50 };
-  const width = 800 - margin.left - margin.right;
-  const height = 400 - margin.top - margin.bottom;
+  const { width, height, margin } = chartDimensions;
 
   svg.attr("width", width + margin.left + margin.right)
      .attr("height", height + margin.top + margin.bottom);
@@ -311,74 +362,73 @@ function renderParallel(data) {
 
   const color = d3.scaleSequential()
     .domain(d3.extent(data, d => d.exam))
-    .interpolator(d3.interpolateTurbo);
+    .interpolator(d3.interpolateViridis);
 
   function path(d) {
     return d3.line()(dimensions.map(p => [x(p), y[p](d[p])]));
   }
 
-  // Draw all lines with smooth transition
-  g.selectAll("path")
+  // Background lines
+  g.selectAll(".background")
     .data(data)
     .enter().append("path")
+    .attr("class", "background")
+    .attr("d", path)
+    .attr("fill", "none")
+    .attr("stroke", "#e5e7eb")
+    .attr("stroke-width", 1)
+    .attr("opacity", 0.3);
+
+  // Foreground lines
+  const foreground = g.selectAll(".foreground")
+    .data(data)
+    .enter().append("path")
+    .attr("class", "foreground")
     .attr("d", path)
     .attr("fill", "none")
     .attr("stroke", d => color(d.exam))
-    .attr("stroke-width", 1.2)
+    .attr("stroke-width", 1.5)
     .attr("stroke-opacity", 0)
-    .transition()
-    .delay((d, i) => i * 3) // wave effect
-    .duration(1000)
-    .attr("stroke-opacity", 0.5);
-
-  // Hover events (attach after transition)
-  g.selectAll("path")
     .on("mouseover", function (e, d) {
-      g.selectAll("path").transition().duration(100)
-        .attr("stroke-opacity", 0.1);
-
-      d3.select(this)
-        .raise()
-        .transition().duration(100)
+      d3.selectAll(".foreground").transition().duration(100).attr("stroke-opacity", 0.1);
+      d3.select(this).raise().transition().duration(100)
         .attr("stroke-width", 3)
         .attr("stroke-opacity", 1)
-        .attr("stroke", "#000");
-
-      d3.select("#tooltip")
-        .style("opacity", 1)
-        .html(`Exam Score: ${d.exam.toFixed(1)}`)
-        .style("left", `${e.pageX + 5}px`)
-        .style("top", `${e.pageY - 28}px`);
+        .attr("stroke", colors.primary);
+      showTooltip(e, `<strong>Student Profile</strong><br/>Exam Score: ${d.exam.toFixed(1)}`);
     })
     .on("mouseout", function () {
-      g.selectAll("path")
-        .transition().duration(200)
-        .attr("stroke-width", 1.2)
-        .attr("stroke-opacity", 0.5)
+      d3.selectAll(".foreground").transition().duration(200)
+        .attr("stroke-width", 1.5)
+        .attr("stroke-opacity", 0.6)
         .attr("stroke", d => color(d.exam));
-
-      d3.select("#tooltip").style("opacity", 0);
+      hideTooltip();
     });
+
+  foreground.transition().delay((d, i) => i * 3).duration(1000)
+    .attr("stroke-opacity", 0.6);
 
   // Axes
   dimensions.forEach(dim => {
-    g.append("g")
+    const axis = g.append("g")
+      .attr("class", "axis")
       .attr("transform", `translate(${x(dim)},0)`)
-      .call(d3.axisLeft(y[dim]))
-      .append("text")
-      .attr("y", -9)
+      .call(d3.axisLeft(y[dim]).ticks(5));
+
+    axis.append("text")
+      .attr("y", -15)
       .attr("text-anchor", "middle")
-      .attr("fill", "black")
-      .text(dim);
+      .attr("fill", colors.primary)
+      .style("font-weight", "600")
+      .style("font-size", "12px")
+      .text(dim.charAt(0).toUpperCase() + dim.slice(1));
   });
 }
 
 // VISUAL 5: Violin Plot
 function renderViolin(data) {
   const svg = d3.select("#violinplot");
-  const margin = { top: 50, right: 30, bottom: 50, left: 60 };
-  const width = 500 - margin.left - margin.right;
-  const height = 400 - margin.top - margin.bottom;
+  const { width, height, margin } = chartDimensions;
 
   svg.attr("width", width + margin.left + margin.right)
      .attr("height", height + margin.top + margin.bottom);
@@ -391,7 +441,10 @@ function renderViolin(data) {
   const x = d3.scaleBand().domain(categories).range([0, width]).padding(0.4);
   const xNum = d3.scaleLinear().range([0, x.bandwidth() / 2]);
 
-  g.append("g").call(d3.axisLeft(y));
+  // Axes
+  g.append("g").call(d3.axisLeft(y).tickSize(-width))
+    .call(g => g.select(".domain").remove())
+    .call(g => g.selectAll(".tick line").attr("stroke-opacity", 0.1));
   g.append("g")
     .attr("transform", `translate(0, ${height})`)
     .call(d3.axisBottom(x));
@@ -411,7 +464,7 @@ function renderViolin(data) {
 
   const kde = kernelDensityEstimator(kernelEpanechnikov(7), d3.range(0, 100, 1));
 
-  categories.forEach(cat => {
+  categories.forEach((cat, catIndex) => {
     const filtered = data.filter(d =>
       d.extracurricular === cat &&
       d.exam !== null && !isNaN(+d.exam)
@@ -422,18 +475,18 @@ function renderViolin(data) {
     const density = kde(scores);
     xNum.domain([0, d3.max(density, d => d[1])]);
 
-    const fillColor = cat === "Yes" ? "steelblue" : "tomato";
+    const fillColor = catIndex === 0 ? colors.accent : colors.warning;
 
-    // Violin shapes with slow fade-in
+    // Violin shapes
     ["left", "right"].forEach(side => {
       g.append("path")
         .datum(density)
         .attr("fill", fillColor)
-        .attr("stroke", "#000")
-        .attr("stroke-width", 1)
+        .attr("stroke", fillColor)
+        .attr("stroke-width", 2)
         .attr("opacity", 0)
         .transition().duration(1500)
-        .attr("opacity", 0.5)
+        .attr("opacity", 0.7)
         .attr("d", d3.line()
           .curve(d3.curveBasis)
           .x(d => {
@@ -444,53 +497,52 @@ function renderViolin(data) {
         );
     });
 
-    // Raincloud dots with hover
+    // Individual points
     g.selectAll(`.dot-${cat}`)
       .data(scores)
       .enter()
       .append("circle")
       .attr("class", `dot-${cat}`)
-      .attr("cx", () => x(cat) + x.bandwidth() / 2 + (Math.random() - 0.5) * 10)
+      .attr("cx", () => x(cat) + x.bandwidth() / 2 + (Math.random() - 0.5) * 15)
       .attr("cy", d => y(d))
-      .attr("r", 2.5)
-      .attr("fill", "#333")
+      .attr("r", 2)
+      .attr("fill", "#374151")
       .attr("opacity", 0)
       .on("mouseover", (e, d) => {
-        d3.select("#tooltip")
-          .style("opacity", 1)
-          .html(`<strong>${cat}</strong><br>Score: ${d.toFixed(1)}`)
-          .style("left", `${e.pageX + 5}px`)
-          .style("top", `${e.pageY - 28}px`);
+        showTooltip(e, `<strong>${cat} Extracurricular</strong><br/>Score: ${d.toFixed(1)}`);
       })
-      .on("mouseout", () => {
-        d3.select("#tooltip").style("opacity", 0);
-      })
+      .on("mouseout", hideTooltip)
       .transition()
       .duration(1000)
+      .delay(500)
       .attr("opacity", 0.6);
   });
 
   // Axis labels
   g.append("text")
     .attr("x", width / 2)
-    .attr("y", height + 40)
+    .attr("y", height + 45)
     .attr("text-anchor", "middle")
+    .style("font-size", "14px")
+    .style("fill", "#6b7280")
+    .style("font-weight", "500")
     .text("Extracurricular Participation");
 
   g.append("text")
     .attr("transform", "rotate(-90)")
     .attr("x", -height / 2)
-    .attr("y", -45)
+    .attr("y", -40)
     .attr("text-anchor", "middle")
+    .style("font-size", "14px")
+    .style("fill", "#6b7280")
+    .style("font-weight", "500")
     .text("Exam Score");
 }
 
 // Visual 6 Bubble Plot
 function renderBubble(data) {
   const svg = d3.select("#bubblechart");
-  const margin = { top: 50, right: 30, bottom: 60, left: 60 };
-  const width = 600 - margin.left - margin.right;
-  const height = 400 - margin.top - margin.bottom;
+  const { width, height, margin } = chartDimensions;
 
   svg.attr("width", width + margin.left + margin.right)
      .attr("height", height + margin.top + margin.bottom);
@@ -500,23 +552,34 @@ function renderBubble(data) {
 
   const x = d3.scaleLinear().domain([0, d3.max(data, d => d.study)]).range([0, width]);
   const y = d3.scaleLinear().domain([0, d3.max(data, d => d.sleep)]).range([height, 0]);
-  const r = d3.scaleSqrt().domain([0, 100]).range([2, 20]);
+  const r = d3.scaleSqrt().domain([0, 100]).range([3, 25]);
 
-  g.append("g").attr("transform", `translate(0, ${height})`).call(d3.axisBottom(x));
-  g.append("g").call(d3.axisLeft(y));
+  g.append("g").attr("transform", `translate(0, ${height})`)
+    .call(d3.axisBottom(x).tickSize(-height))
+    .call(g => g.select(".domain").remove())
+    .call(g => g.selectAll(".tick line").attr("stroke-opacity", 0.1));
+  g.append("g").call(d3.axisLeft(y).tickSize(-width))
+    .call(g => g.select(".domain").remove())
+    .call(g => g.selectAll(".tick line").attr("stroke-opacity", 0.1));
 
   // Axis labels
   g.append("text")
     .attr("x", width / 2)
     .attr("y", height + 45)
     .attr("text-anchor", "middle")
+    .style("font-size", "14px")
+    .style("fill", "#6b7280")
+    .style("font-weight", "500")
     .text("Study Hours per Day");
 
   g.append("text")
     .attr("transform", "rotate(-90)")
     .attr("x", -height / 2)
-    .attr("y", -45)
+    .attr("y", -40)
     .attr("text-anchor", "middle")
+    .style("font-size", "14px")
+    .style("fill", "#6b7280")
+    .style("font-weight", "500")
     .text("Sleep Hours");
 
   // Bubbles
@@ -527,32 +590,24 @@ function renderBubble(data) {
     .attr("cx", d => x(d.study))
     .attr("cy", d => y(d.sleep))
     .attr("r", 0)
-    .attr("fill", "rgba(70,130,180,0.6)")
-    .attr("stroke", "#444")
-    .attr("stroke-width", 1)
+    .attr("fill", colors.accent)
+    .attr("opacity", 0.6)
+    .attr("stroke", "white")
+    .attr("stroke-width", 2)
     .on("mouseover", (e, d) => {
-      d3.select("#tooltip")
-        .style("opacity", 1)
-        .html(`
-          <strong>Exam Score:</strong> ${d.exam.toFixed(1)}<br>
-          <strong>Study:</strong> ${d.study} hrs<br>
-          <strong>Sleep:</strong> ${d.sleep} hrs
-        `)
-        .style("left", `${e.pageX + 5}px`)
-        .style("top", `${e.pageY - 28}px`);
+      showTooltip(e, `<strong>Exam Score:</strong> ${d.exam.toFixed(1)}<br><strong>Study:</strong> ${d.study} hrs<br><strong>Sleep:</strong> ${d.sleep} hrs`);
     })
-    .on("mouseout", () => d3.select("#tooltip").style("opacity", 0))
+    .on("mouseout", hideTooltip)
     .transition()
     .duration(1000)
+    .delay((d, i) => i * 5)
     .attr("r", d => r(d.exam));
 }
 
 // VISUAL 7: Attendance vs Exam Score
 function renderAttendance(data) {
   const svg = d3.select("#attendancechart");
-  const margin = { top: 50, right: 30, bottom: 60, left: 60 };
-  const width = 600 - margin.left - margin.right;
-  const height = 400 - margin.top - margin.bottom;
+  const { width, height, margin } = chartDimensions;
 
   svg.attr("width", width + margin.left + margin.right)
      .attr("height", height + margin.top + margin.bottom);
@@ -560,9 +615,7 @@ function renderAttendance(data) {
   const g = svg.append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
-  // Check data
   const filtered = data.filter(d => !isNaN(d.attend) && !isNaN(d.exam));
-  console.log("Rendering Attendance Chart | Count:", filtered.length);
 
   // Scales
   const x = d3.scaleLinear().domain([0, 100]).range([0, width]);
@@ -571,24 +624,34 @@ function renderAttendance(data) {
   // Axes
   g.append("g")
     .attr("transform", `translate(0, ${height})`)
-    .call(d3.axisBottom(x));
-  g.append("g").call(d3.axisLeft(y));
+    .call(d3.axisBottom(x).tickSize(-height))
+    .call(g => g.select(".domain").remove())
+    .call(g => g.selectAll(".tick line").attr("stroke-opacity", 0.1));
+  g.append("g").call(d3.axisLeft(y).tickSize(-width))
+    .call(g => g.select(".domain").remove())
+    .call(g => g.selectAll(".tick line").attr("stroke-opacity", 0.1));
 
   // Labels
   g.append("text")
     .attr("x", width / 2)
     .attr("y", height + 45)
     .attr("text-anchor", "middle")
+    .style("font-size", "14px")
+    .style("fill", "#6b7280")
+    .style("font-weight", "500")
     .text("Attendance Percentage");
 
   g.append("text")
     .attr("transform", "rotate(-90)")
     .attr("x", -height / 2)
-    .attr("y", -45)
+    .attr("y", -40)
     .attr("text-anchor", "middle")
+    .style("font-size", "14px")
+    .style("fill", "#6b7280")
+    .style("font-weight", "500")
     .text("Exam Score");
 
-  // Points (with fade-in)
+  // Points
   g.selectAll("circle")
     .data(filtered)
     .enter()
@@ -596,31 +659,24 @@ function renderAttendance(data) {
     .attr("cx", d => x(d.attend))
     .attr("cy", d => y(d.exam))
     .attr("r", 0)
-    .attr("fill", "teal")
-    .attr("opacity", 0)
+    .attr("fill", colors.success)
+    .attr("opacity", 0.7)
+    .attr("stroke", "white")
+    .attr("stroke-width", 1.5)
     .on("mouseover", (e, d) => {
-      d3.select("#tooltip")
-        .style("opacity", 1)
-        .html(`
-          <strong>Attendance:</strong> ${d.attend}%<br>
-          <strong>Exam Score:</strong> ${d.exam.toFixed(1)}
-        `)
-        .style("left", `${e.pageX + 5}px`)
-        .style("top", `${e.pageY - 28}px`);
+      showTooltip(e, `<strong>Attendance:</strong> ${d.attend}%<br><strong>Exam Score:</strong> ${d.exam.toFixed(1)}`);
     })
-    .on("mouseout", () => d3.select("#tooltip").style("opacity", 0))
+    .on("mouseout", hideTooltip)
     .transition()
     .duration(1000)
-    .attr("r", 4)
-    .attr("opacity", 0.6);
+    .delay((d, i) => i * 3)
+    .attr("r", 5);
 }
 
 // VISUAL 8: Diet Quality Distribution
 function renderDiet(data) {
   const svg = d3.select("#dietchart");
-  const margin = { top: 50, right: 30, bottom: 60, left: 60 };
-  const width = 600 - margin.left - margin.right;
-  const height = 400 - margin.top - margin.bottom;
+  const { width, height, margin } = chartDimensions;
 
   svg.attr("width", width + margin.left + margin.right)
      .attr("height", height + margin.top + margin.bottom);
@@ -631,7 +687,7 @@ function renderDiet(data) {
   const dietLevels = ["Poor", "Fair", "Good", "Excellent"];
   const colorScale = d3.scaleOrdinal()
     .domain(dietLevels)
-    .range(["#d73027", "#fc8d59", "#91bfdb", "#4575b4"]);
+    .range([colors.danger, colors.warning, colors.accent, colors.success]);
 
   const x = d3.scalePoint()
     .domain(dietLevels)
@@ -646,52 +702,53 @@ function renderDiet(data) {
     .attr("transform", `translate(0, ${height})`)
     .call(d3.axisBottom(x));
 
-  g.append("g").call(d3.axisLeft(y));
+  g.append("g").call(d3.axisLeft(y).tickSize(-width))
+    .call(g => g.select(".domain").remove())
+    .call(g => g.selectAll(".tick line").attr("stroke-opacity", 0.1));
 
   // Labels
   g.append("text")
     .attr("x", width / 2)
     .attr("y", height + 45)
     .attr("text-anchor", "middle")
+    .style("font-size", "14px")
+    .style("fill", "#6b7280")
+    .style("font-weight", "500")
     .text("Diet Quality");
 
   g.append("text")
     .attr("transform", "rotate(-90)")
     .attr("x", -height / 2)
-    .attr("y", -45)
+    .attr("y", -40)
     .attr("text-anchor", "middle")
+    .style("font-size", "14px")
+    .style("fill", "#6b7280")
+    .style("font-weight", "500")
     .text("Exam Score");
 
-  // Filter and render dots
+  // Dots
   g.selectAll("circle")
     .data(data.filter(d => dietLevels.includes(d.diet_quality) && !isNaN(d.exam)))
     .enter()
     .append("circle")
-    .attr("cx", d => x(d.diet_quality) + (Math.random() - 0.5) * 20)  // jitter
+    .attr("cx", d => x(d.diet_quality) + (Math.random() - 0.5) * 20)
     .attr("cy", d => y(d.exam))
     .attr("r", 4)
     .attr("fill", d => colorScale(d.diet_quality))
-    .attr("opacity", 0.7)
+    .attr("opacity", 0.8)
+    .attr("stroke", "white")
+    .attr("stroke-width", 1)
     .on("mouseover", (e, d) => {
-      d3.select("#tooltip")
-        .style("opacity", 1)
-        .html(`
-          <strong>Diet:</strong> ${d.diet_quality}<br>
-          <strong>Score:</strong> ${d.exam.toFixed(1)}
-        `)
-        .style("left", `${e.pageX + 5}px`)
-        .style("top", `${e.pageY - 28}px`);
+      showTooltip(e, `<strong>Diet:</strong> ${d.diet_quality}<br><strong>Score:</strong> ${d.exam.toFixed(1)}`);
     })
-    .on("mouseout", () => d3.select("#tooltip").style("opacity", 0));
+    .on("mouseout", hideTooltip);
 }
  
 // VISUAL 9: Radial Student Profile Comparison
 function renderRadialProfiles(data) {
   const svg = d3.select("#radialchart");
-  const margin = { top: 50, right: 50, bottom: 50, left: 50 };
-  const width = 600 - margin.left - margin.right;
-  const height = 600 - margin.top - margin.bottom;
-  const radius = Math.min(width, height) / 2 - 40;
+  const { width, height, margin } = chartDimensions;
+  const radius = Math.min(width, height) / 2 - 50;
 
   svg.attr("width", width + margin.left + margin.right)
      .attr("height", height + margin.top + margin.bottom);
@@ -717,6 +774,16 @@ function renderRadialProfiles(data) {
 
   const axisGroup = g.append("g").attr("class", "axisWrapper");
 
+  // Grid lines
+  [25, 50, 75, 100].forEach(level => {
+    axisGroup.append("circle")
+      .attr("r", rScale(level))
+      .attr("fill", "none")
+      .attr("stroke", "#f3f4f6")
+      .attr("stroke-width", level === 100 ? 2 : 1);
+  });
+
+  // Axes and labels
   metrics.forEach(metric => {
     const angle = angleScale(metric.key);
     const r = rScale(100);
@@ -726,22 +793,18 @@ function renderRadialProfiles(data) {
     axisGroup.append("line")
       .attr("x1", 0).attr("y1", 0)
       .attr("x2", x).attr("y2", y)
-      .attr("stroke", "#ddd");
+      .attr("stroke", "#e5e7eb")
+      .attr("stroke-width", 1);
 
     axisGroup.append("text")
       .attr("x", x * 1.15)
       .attr("y", y * 1.15)
-      .style("font-size", "10px")
+      .style("font-size", "12px")
+      .style("font-weight", "500")
+      .style("fill", colors.primary)
       .attr("text-anchor", angle > Math.PI ? "end" : "start")
       .attr("alignment-baseline", "middle")
       .text(metric.label);
-  });
-
-  [25, 50, 75, 100].forEach(level => {
-    axisGroup.append("circle")
-      .attr("r", rScale(level))
-      .attr("fill", "none")
-      .attr("stroke", "#eee");
   });
 
   function normalizeValue(d, metric) {
@@ -760,13 +823,11 @@ function renderRadialProfiles(data) {
     };
   });
 
-  // ✅ Prevent duplicate dropdown
+  // Prevent duplicate dropdown
   if (d3.select(".bin-selector").empty()) {
     const selector = d3.select("#radial-slide")
-      .insert("div", ":first-child")
-      .attr("class", "bin-selector")
-      .style("text-align", "center")
-      .style("margin-bottom", "20px");
+      .insert("div", "svg")
+      .attr("class", "bin-selector");
 
     selector.append("label").text("Select Score Percentile Group: ");
     const select = selector.append("select").on("change", e => updateProfile(+e.target.value));
@@ -783,7 +844,7 @@ function renderRadialProfiles(data) {
 
   function updateProfile(binIndex) {
     const bin = bins[binIndex];
-    g.selectAll(".binProfile, .globalProfile, .avgLabel").remove();
+    g.selectAll(".binProfile, .globalProfile").remove();
 
     const binAvg = {};
     metrics.forEach(m => {
@@ -799,18 +860,10 @@ function renderRadialProfiles(data) {
       .datum(metrics)
       .attr("class", "globalProfile")
       .attr("d", globalPath)
-      .attr("fill", "rgba(100,100,100,0.1)")
-      .attr("stroke", "#666")
-      .attr("stroke-dasharray", "3,3");
-
-    // Add inline label near first axis (e.g., top of chart)
-    const firstAngle = angleScale(metrics[0].key);
-    g.append("text")
-      .attr("x", Math.sin(firstAngle) * rScale(normalizeValue(globalAvg, metrics[0])) + 5)
-      .attr("y", -Math.cos(firstAngle) * rScale(normalizeValue(globalAvg, metrics[0])) - 5)
-      .text("Total Averages")
-      .style("font-size", "10px")
-      .attr("fill", "#666");
+      .attr("fill", "rgba(156,163,175,0.2)")
+      .attr("stroke", "#9ca3af")
+      .attr("stroke-dasharray", "5,5")
+      .attr("stroke-width", 2);
 
     const binPath = d3.lineRadial()
       .angle(d => angleScale(d.key))
@@ -821,9 +874,9 @@ function renderRadialProfiles(data) {
       .datum(metrics)
       .attr("class", "binProfile")
       .attr("d", binPath)
-      .attr("fill", "rgba(30,144,255,0.2)")
-      .attr("stroke", "steelblue")
-      .attr("stroke-width", 2);
+      .attr("fill", `${colors.primary}30`)
+      .attr("stroke", colors.primary)
+      .attr("stroke-width", 3);
 
     metrics.forEach(metric => {
       const angle = angleScale(metric.key);
@@ -834,27 +887,21 @@ function renderRadialProfiles(data) {
         .attr("class", "binProfile")
         .attr("cx", Math.sin(angle) * rScale(binVal))
         .attr("cy", -Math.cos(angle) * rScale(binVal))
-        .attr("r", 4)
-        .attr("fill", "steelblue")
+        .attr("r", 5)
+        .attr("fill", colors.primary)
+        .attr("stroke", "white")
+        .attr("stroke-width", 2)
         .on("mouseover", (e) => {
-          d3.select("#tooltip")
-            .style("opacity", 1)
-            .html(`
-              <strong>${metric.label}</strong><br>
-              Group Avg: ${binAvg[metric.key].toFixed(1)}<br>
-              Class Avg: ${globalAvg[metric.key].toFixed(1)}
-            `)
-            .style("left", `${e.pageX + 5}px`)
-            .style("top", `${e.pageY - 28}px`);
+          showTooltip(e, `<strong>${metric.label}</strong><br>Group Avg: ${binAvg[metric.key].toFixed(1)}<br>Class Avg: ${globalAvg[metric.key].toFixed(1)}`);
         })
-        .on("mouseout", () => d3.select("#tooltip").style("opacity", 0));
+        .on("mouseout", hideTooltip);
 
       g.append("circle")
         .attr("class", "globalProfile")
         .attr("cx", Math.sin(angle) * rScale(globalVal))
         .attr("cy", -Math.cos(angle) * rScale(globalVal))
         .attr("r", 3)
-        .attr("fill", "#666");
+        .attr("fill", "#9ca3af");
     });
   }
 }
@@ -862,24 +909,22 @@ function renderRadialProfiles(data) {
 // VISUAL 10: Stacked Bar Chart of Daily Time Allocation
 function renderTimeAllocation(data) {
   const svg = d3.select("#timeallocationchart");
-  const margin = { top: 50, right: 30, bottom: 100, left: 60 };
-  const width = 800 - margin.left - margin.right;
-  const height = 500 - margin.top - margin.bottom;
+  const { width, height, margin } = chartDimensions;
 
   svg.selectAll("*").remove();
 
   svg.attr("width", width + margin.left + margin.right)
-     .attr("height", height + margin.top + margin.bottom);
+     .attr("height", height + margin.top + margin.bottom + 40); // Extra space for legend
 
   const g = svg.append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
   const timeCategories = [
-  { key: "study", name: "Study", color: "#69b3a2" },
-  { key: "sleep", name: "Sleep", color: "#f28e2b" },
-  { key: "social", name: "Social Media", color: "#e15759" },
-  { key: "netflix", name: "Netflix", color: "#76b7b2" },
-  { key: "other", name: "Other", color: "#bab0ac" }
+    { key: "study", name: "Study", color: colors.primary },
+    { key: "sleep", name: "Sleep", color: colors.accent },
+    { key: "social", name: "Social Media", color: colors.warning },
+    { key: "netflix", name: "Netflix", color: colors.secondary },
+    { key: "other", name: "Other", color: "#94a3b8" }
   ];
 
   // Calculate "other" category
@@ -937,18 +982,21 @@ function renderTimeAllocation(data) {
     .attr("transform", `translate(0,${height})`)
     .call(d3.axisBottom(x))
     .selectAll("text")
-    .attr("x", -5)
-    .attr("y", 10)
-    .attr("text-anchor", "end")
-    .attr("transform", "rotate(-45)");
+    .style("font-size", "12px")
+    .style("font-weight", "500");
 
-  g.append("g").call(d3.axisLeft(y).ticks(6));
+  g.append("g").call(d3.axisLeft(y).ticks(6).tickSize(-width))
+    .call(g => g.select(".domain").remove())
+    .call(g => g.selectAll(".tick line").attr("stroke-opacity", 0.1));
 
   // Axis Labels
   g.append("text")
     .attr("x", width / 2)
-    .attr("y", height + margin.bottom - 5)
+    .attr("y", height + 45)
     .attr("text-anchor", "middle")
+    .style("font-size", "14px")
+    .style("fill", "#6b7280")
+    .style("font-weight", "500")
     .text("Performance Group (by Exam Score Quartile)");
 
   g.append("text")
@@ -956,6 +1004,9 @@ function renderTimeAllocation(data) {
     .attr("x", -height / 2)
     .attr("y", -40)
     .attr("text-anchor", "middle")
+    .style("font-size", "14px")
+    .style("fill", "#6b7280")
+    .style("font-weight", "500")
     .text("Hours per Day");
 
   // Bars
@@ -971,41 +1022,38 @@ function renderTimeAllocation(data) {
     .attr("y", height)
     .attr("height", 0)
     .attr("width", x.bandwidth())
+    .attr("rx", 4)
     .on("mouseover", function (e, d) {
       const category = timeCategories.find(c => c.key === this.parentNode.__data__.key);
-      d3.select("#tooltip")
-        .style("opacity", 1)
-        .html(`
-          <strong>${category.name}</strong><br>
-          Group: ${d.data.name}<br>
-          Hours: ${(d[1] - d[0]).toFixed(1)}
-        `)
-        .style("left", `${e.pageX + 5}px`)
-        .style("top", `${e.pageY - 28}px`);
+      showTooltip(e, `<strong>${category.name}</strong><br>Group: ${d.data.name}<br>Hours: ${(d[1] - d[0]).toFixed(1)}`);
     })
-    .on("mouseout", () => d3.select("#tooltip").style("opacity", 0))
+    .on("mouseout", hideTooltip)
     .transition()
     .duration(800)
+    .delay((d, i) => i * 100)
     .attr("y", d => y(d[1]))
     .attr("height", d => y(d[0]) - y(d[1]));
 
-  // Legend
+  // Modern Legend
   const legend = svg.append("g")
-    .attr("transform", `translate(${margin.left},${height + margin.top + 60})`);
+    .attr("transform", `translate(${margin.left},${height + margin.top + 80})`);
 
   timeCategories.forEach((cat, i) => {
     const item = legend.append("g")
       .attr("transform", `translate(${i * 120}, 0)`);
 
     item.append("rect")
-      .attr("width", 10)
-      .attr("height", 10)
+      .attr("width", 12)
+      .attr("height", 12)
+      .attr("rx", 2)
       .attr("fill", cat.color);
 
     item.append("text")
-      .attr("x", 15)
+      .attr("x", 18)
       .attr("y", 10)
       .text(cat.name)
-      .style("font-size", "10px");
+      .style("font-size", "12px")
+      .style("font-weight", "500")
+      .style("fill", "#374151");
   });
 }
