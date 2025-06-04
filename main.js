@@ -830,7 +830,9 @@ function renderRadialProfiles(data) {
       .attr("class", "bin-selector");
 
     selector.append("label").text("Select Score Percentile Group: ");
-    const select = selector.append("select").on("change", e => updateProfile(+e.target.value));
+    const select = selector.append("select").on("change", function () {
+      updateProfile(+this.value);
+    });
 
     select.selectAll("option")
       .data(bins)
