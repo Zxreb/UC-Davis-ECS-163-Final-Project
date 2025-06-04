@@ -82,10 +82,10 @@ function setupScrollObserver(data) {
             case "study-slide": renderStudy(data); break;
             case "sleep-slide": renderSleep(data); break;
             case "social-slide": renderSocial(data); break;
+            case "attendance-slide": renderAttendance(data); break;
             case "parallel-slide": renderParallel(data); break;
             case "violin-slide": renderViolin(data); break;
             case "bubble-slide": renderBubble(data); break;
-            case "attendance-slide": renderAttendance(data); break;
             case "diet-slide": renderDiet(data); break;
             case "radial-slide": renderRadialProfiles(data); break;
             case "time-slide": renderTimeAllocation(data); break;
@@ -336,7 +336,76 @@ function renderSocial(data) {
     .text("Exam Score");
 }
 
-// VISUAL 4: Parallel Coordinates Plot
+// VISUAL 4: Attendance vs Exam Score
+function renderAttendance(data) {
+  const svg = d3.select("#attendancechart");
+  const { width, height, margin } = chartDimensions;
+
+  svg.attr("width", width + margin.left + margin.right)
+     .attr("height", height + margin.top + margin.bottom);
+
+  const g = svg.append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const filtered = data.filter(d => !isNaN(d.attend) && !isNaN(d.exam));
+
+  // Scales
+  const x = d3.scaleLinear().domain([0, 100]).range([0, width]);
+  const y = d3.scaleLinear().domain([0, 100]).range([height, 0]);
+
+  // Axes
+  g.append("g")
+    .attr("transform", `translate(0, ${height})`)
+    .call(d3.axisBottom(x).tickSize(-height))
+    .call(g => g.select(".domain").remove())
+    .call(g => g.selectAll(".tick line").attr("stroke-opacity", 0.1));
+  g.append("g").call(d3.axisLeft(y).tickSize(-width))
+    .call(g => g.select(".domain").remove())
+    .call(g => g.selectAll(".tick line").attr("stroke-opacity", 0.1));
+
+  // Labels
+  g.append("text")
+    .attr("x", width / 2)
+    .attr("y", height + 45)
+    .attr("text-anchor", "middle")
+    .style("font-size", "14px")
+    .style("fill", "#6b7280")
+    .style("font-weight", "500")
+    .text("Attendance Percentage");
+
+  g.append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("x", -height / 2)
+    .attr("y", -40)
+    .attr("text-anchor", "middle")
+    .style("font-size", "14px")
+    .style("fill", "#6b7280")
+    .style("font-weight", "500")
+    .text("Exam Score");
+
+  // Points
+  g.selectAll("circle")
+    .data(filtered)
+    .enter()
+    .append("circle")
+    .attr("cx", d => x(d.attend))
+    .attr("cy", d => y(d.exam))
+    .attr("r", 0)
+    .attr("fill", colors.success)
+    .attr("opacity", 0.7)
+    .attr("stroke", "white")
+    .attr("stroke-width", 1.5)
+    .on("mouseover", (e, d) => {
+      showTooltip(e, `<strong>Attendance:</strong> ${d.attend}%<br><strong>Exam Score:</strong> ${d.exam.toFixed(1)}`);
+    })
+    .on("mouseout", hideTooltip)
+    .transition()
+    .duration(1000)
+    .delay((d, i) => i * 3)
+    .attr("r", 5);
+}
+
+// VISUAL 5: Parallel Coordinates Plot
 function renderParallel(data) {
   const svg = d3.select("#parallelchart");
   const { width, height, margin } = chartDimensions;
@@ -425,7 +494,7 @@ function renderParallel(data) {
   });
 }
 
-// VISUAL 5: Violin Plot
+// VISUAL 6: Violin Plot
 function renderViolin(data) {
   const svg = d3.select("#violinplot");
   const { width, height, margin } = chartDimensions;
@@ -539,7 +608,7 @@ function renderViolin(data) {
     .text("Exam Score");
 }
 
-// Visual 6 Bubble Plot
+// Visual 7: Bubble Plot
 function renderBubble(data) {
   const svg = d3.select("#bubblechart");
   const { width, height, margin } = chartDimensions;
@@ -602,75 +671,6 @@ function renderBubble(data) {
     .duration(1000)
     .delay((d, i) => i * 5)
     .attr("r", d => r(d.exam));
-}
-
-// VISUAL 7: Attendance vs Exam Score
-function renderAttendance(data) {
-  const svg = d3.select("#attendancechart");
-  const { width, height, margin } = chartDimensions;
-
-  svg.attr("width", width + margin.left + margin.right)
-     .attr("height", height + margin.top + margin.bottom);
-
-  const g = svg.append("g")
-    .attr("transform", `translate(${margin.left},${margin.top})`);
-
-  const filtered = data.filter(d => !isNaN(d.attend) && !isNaN(d.exam));
-
-  // Scales
-  const x = d3.scaleLinear().domain([0, 100]).range([0, width]);
-  const y = d3.scaleLinear().domain([0, 100]).range([height, 0]);
-
-  // Axes
-  g.append("g")
-    .attr("transform", `translate(0, ${height})`)
-    .call(d3.axisBottom(x).tickSize(-height))
-    .call(g => g.select(".domain").remove())
-    .call(g => g.selectAll(".tick line").attr("stroke-opacity", 0.1));
-  g.append("g").call(d3.axisLeft(y).tickSize(-width))
-    .call(g => g.select(".domain").remove())
-    .call(g => g.selectAll(".tick line").attr("stroke-opacity", 0.1));
-
-  // Labels
-  g.append("text")
-    .attr("x", width / 2)
-    .attr("y", height + 45)
-    .attr("text-anchor", "middle")
-    .style("font-size", "14px")
-    .style("fill", "#6b7280")
-    .style("font-weight", "500")
-    .text("Attendance Percentage");
-
-  g.append("text")
-    .attr("transform", "rotate(-90)")
-    .attr("x", -height / 2)
-    .attr("y", -40)
-    .attr("text-anchor", "middle")
-    .style("font-size", "14px")
-    .style("fill", "#6b7280")
-    .style("font-weight", "500")
-    .text("Exam Score");
-
-  // Points
-  g.selectAll("circle")
-    .data(filtered)
-    .enter()
-    .append("circle")
-    .attr("cx", d => x(d.attend))
-    .attr("cy", d => y(d.exam))
-    .attr("r", 0)
-    .attr("fill", colors.success)
-    .attr("opacity", 0.7)
-    .attr("stroke", "white")
-    .attr("stroke-width", 1.5)
-    .on("mouseover", (e, d) => {
-      showTooltip(e, `<strong>Attendance:</strong> ${d.attend}%<br><strong>Exam Score:</strong> ${d.exam.toFixed(1)}`);
-    })
-    .on("mouseout", hideTooltip)
-    .transition()
-    .duration(1000)
-    .delay((d, i) => i * 3)
-    .attr("r", 5);
 }
 
 // VISUAL 8: Diet Quality Distribution
