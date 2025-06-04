@@ -4,6 +4,9 @@ This is the final project repository for UC Davis' ECS 163 Data Visualization Cl
 ## Team Members
 Zareb Islam, John Missal, Adrian Lam, Yahya Habibi
 
+## Instructions
+Clone into the github repository on VS Code on your local laptop. Make sure you have the "live server" extension enables on VS Code. Once cloned into the repository, right click on the index.html file and select the "run live server" option. The interactive slideshow should pop up and you should be able to learn some new things about student habits and the effect they can have on exam scores!
+
 ## Motivation
 The primary objective of our project is to identify as well as communicate to the audience, particularly incoming college students, the student habits that are most significantly correlated with academic success. We aim to use accessible visualizations in order to illustrate how various daily behaviors can directly affect academic outcomes, helping students gain an understanding of these relationships and applying insights to their own lives.
 
