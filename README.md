@@ -1,5 +1,5 @@
 # UC-Davis-ECS-163-Final-Project
-This is the final project repository for UC Davis' ECS 163 Data Visualization Class
+This is the final project repository for UC Davis' ECS 163 Data Visualization Class for Team 19.
 
 ## Team Members
 Zareb Islam, John Missal, Adrian Lam, Yahya Habibi
